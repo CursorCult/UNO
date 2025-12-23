@@ -19,6 +19,6 @@ jobs:
       - name: Install cursorcult
         run: |
           python -m pip install --upgrade pip
-          python -m pip install cursorcult || python -m pip install git+https://github.com/CursorCult/_CursorCult.git
+          python -m pip install git+https://github.com/CursorCult/_CursorCult.git
       - name: Verify rules repo
         run: cursorcult verify .
