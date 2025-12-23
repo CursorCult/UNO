@@ -41,7 +41,7 @@ def count_definitions(tree: ast.Module) -> tuple[int, int]:
         if isinstance(node, ast.ClassDef):
             
             class_count += 1
-        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             
             function_count += 1
         # Ignore other top-level statements (imports, assignments, etc.)

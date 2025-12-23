@@ -21,6 +21,6 @@ jobs:
       - name: Install cursorcult
         run: |
           python -m pip install --upgrade pip
-          python -m pip install cursorcult
+          python -m pip install --upgrade --no-cache-dir cursorcult
       - name: Verify rules repo
         run: cursorcult verify .
