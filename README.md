@@ -24,7 +24,12 @@ Rule file format reference: https://cursor.com/docs/context/rules#rulemd-file-fo
 
 - Each non-test source file defines exactly one class *or* one function.
 - No extra helpers, side-utilities, or mixed responsibilities in the same module.
+- The file name matches the definition name (following your project’s naming convention).
 - Test files are the only allowed exception for grouping.
+
+**Checker options**
+
+- `UNO/scripts/check_python.py` supports `--loose` to allow case-insensitive name matching and ignore underscores.
 
 **Credits**
 

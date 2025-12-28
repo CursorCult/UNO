@@ -11,7 +11,7 @@ This isolates behavior, reduces cognitive load, and keeps dependency boundaries 
 
 The only exception is test files, which may group multiple tests as needed for clarity and coverage.
 
-UNO does not require naming consistency between a file and the function or class it contains. Choose whatever naming convention fits your language or project; the constraint is about count and responsibility, not names.
+UNO also requires naming consistency between a file and the definition it contains. The file name (without extension) must match the definition name using your project’s naming convention (e.g., `UserProfile` in `user_profile.py`).
 
 ## Examples (Python)
 

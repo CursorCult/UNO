@@ -49,7 +49,17 @@ def count_definitions(tree: ast.Module) -> tuple[int, int]:
     return class_count, function_count
 
 
-def check_file(file_path: Path, filter_fn: Callable[[Path], str] | None = None) -> tuple[bool, str]:
+def normalize_loose(name: str) -> str:
+    """Normalize a name for loose matching (case-insensitive, underscores ignored)."""
+    return name.replace("_", "").lower()
+
+
+def check_file(
+    file_path: Path,
+    filter_fn: Callable[[Path], str] | None = None,
+    *,
+    loose: bool = False,
+) -> tuple[bool, str]:
     """Check a single Python file for UNO compliance.
 
     Args:
@@ -85,6 +95,25 @@ def check_file(file_path: Path, filter_fn: Callable[[Path], str] | None = None) 
     if total_definitions == 0:
         return True, ""  # Empty files or files with only private definitions are OK
     elif total_definitions == 1:
+        definition = next(
+            node
+            for node in tree.body
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+        )
+        file_stem = file_path.stem
+        expected = definition.name
+        if loose:
+            file_norm = normalize_loose(file_stem)
+            expected_norm = normalize_loose(expected)
+            match = file_norm == expected_norm
+        else:
+            match = file_stem == expected
+        if not match:
+            return (
+                False,
+                f"Definition name '{definition.name}' does not match file name '{file_stem}'. "
+                f"Expected '{expected}.py'.",
+            )
         return True, ""
     else:
         definitions = []
@@ -169,6 +198,11 @@ Filter script interface:
         type=Path,
         help="Optional filter script (outside .cursor directory) that filters files",
     )
+    parser.add_argument(
+        "--loose",
+        action="store_true",
+        help="Allow case-insensitive matching and ignore underscores in file/definition names.",
+    )
     parser.add_argument("dir", type=Path, nargs="?", default=Path(), help="Directory to check")
 
     args = parser.parse_args()
@@ -203,7 +237,7 @@ Filter script interface:
     checked_count = 0
 
     for file_path in sorted(python_files):
-        is_compliant, error_msg = check_file(file_path, filter_fn)
+        is_compliant, error_msg = check_file(file_path, filter_fn, loose=args.loose)
         if not is_compliant:
             violations.append((file_path, error_msg))
         if error_msg or is_compliant:  # Count files that were actually checked
