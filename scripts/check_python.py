@@ -22,9 +22,6 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
-from rich.console import Console
-
-console = Console()
 
 
 def count_definitions(tree: ast.Module) -> tuple[int, int]:
@@ -203,6 +200,11 @@ Filter script interface:
         action="store_true",
         help="Allow case-insensitive matching and ignore underscores in file/definition names.",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable progress output while scanning files.",
+    )
     parser.add_argument("dir", type=Path, nargs="?", default=Path(), help="Directory to check")
 
     args = parser.parse_args()
@@ -211,32 +213,37 @@ Filter script interface:
     filter_fn = None
     if args.filter:
         if ".cursor" in args.filter.parts:
-            console.print("[bold red]Error: Filter script must be outside .cursor directory[/bold red]")
+            print("Error: Filter script must be outside .cursor directory", file=sys.stderr)
             sys.exit(1)
         try:
             filter_fn = load_filter_script(args.filter)
         except Exception as e:
-            console.print(f"[bold red]Error loading filter script: {e}[/bold red]")
+            print(f"Error loading filter script: {e}", file=sys.stderr)
             sys.exit(1)
 
     # Find all Python files
     target_dir = args.dir.resolve()
     if not target_dir.exists():
-        console.print(f"[bold red]Error: Directory not found: {target_dir}[/bold red]")
+        print(f"Error: Directory not found: {target_dir}", file=sys.stderr)
         sys.exit(1)
 
     python_files = list(target_dir.rglob("*.py"))
     python_files = [f for f in python_files if "__pycache__" not in str(f)]
 
     if not python_files:
-        console.print(f"[yellow]No Python files found in {target_dir}[/yellow]")
+        print(f"No Python files found in {target_dir}")
         sys.exit(0)
 
     # Check each file
     violations = []
     checked_count = 0
+    total_files = len(python_files)
+    if not args.no_progress:
+        print(f"Checking {total_files} file(s)...")
 
-    for file_path in sorted(python_files):
+    for idx, file_path in enumerate(sorted(python_files), start=1):
+        if not args.no_progress and (idx == 1 or idx % 50 == 0 or idx == total_files):
+            print(f"Progress: {idx}/{total_files}")
         is_compliant, error_msg = check_file(file_path, filter_fn, loose=args.loose)
         if not is_compliant:
             violations.append((file_path, error_msg))
@@ -245,15 +252,15 @@ Filter script interface:
 
     # Report results
     if violations:
-        console.print(f"\n[bold red]UNO Rule Violations ({len(violations)} files):[/bold red]\n")
+        print(f"\nUNO Rule Violations ({len(violations)} files):\n")
         for file_path, error_msg in violations:
             rel_path = file_path.relative_to(target_dir)
-            console.print(f"  [red]{rel_path}[/red]")
-            console.print(f"    {error_msg}\n")
-        console.print(f"[bold red]FAILED: {len(violations)} file(s) violate UNO rule[/bold red]")
+            print(f"  {rel_path}")
+            print(f"    {error_msg}\n")
+        print(f"FAILED: {len(violations)} file(s) violate UNO rule")
         sys.exit(1)
     else:
-        console.print(f"[bold green]PASSED: All {checked_count} file(s) comply with UNO rule[/bold green]")
+        print(f"PASSED: All {checked_count} file(s) comply with UNO rule")
         sys.exit(0)
 
 

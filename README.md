@@ -30,6 +30,7 @@ Rule file format reference: https://cursor.com/docs/context/rules#rulemd-file-fo
 **Checker options**
 
 - `UNO/scripts/check_python.py` supports `--loose` to allow case-insensitive name matching and ignore underscores.
+- Progress output is on by default; use `--no-progress` to disable.
 
 **Credits**
 
