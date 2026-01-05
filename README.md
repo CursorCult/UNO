@@ -45,6 +45,15 @@ The output schema is `cursorcult.defs.v1` and must include required aggregates:
 }
 ```
 
+**Pre-commit hook**
+
+UNO ships a pre-commit hook you can install to run evaluation on every commit:
+
+```sh
+cp .cursor/rules/UNO/scripts/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
 **When to use**
 
 - You want modules to be maximally focused and easy to reason about.
