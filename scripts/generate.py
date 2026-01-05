@@ -2,6 +2,7 @@
 """Generate UNO defs evidence using lizard."""
 
 import argparse
+import ast
 import json
 import os
 import sys
@@ -42,16 +43,36 @@ def collect_paths(patterns: List[str]) -> List[str]:
     return sorted(results)
 
 
-def analyze_file(path: str) -> List[Dict]:
+def analyze_python_top_level(path: str, content: str) -> List[Dict]:
     try:
-        import lizard
+        tree = ast.parse(content, filename=path)
+    except SyntaxError as e:
+        fail(f"Syntax error in {path}: {e}")
     except Exception as e:
-        fail(f"lizard is required for generate.py: {e}")
+        fail(f"Failed to parse {path}: {e}")
 
+    defs_list = []
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            defs_list.append({"kind": "class", "name": node.name, "lineno": node.lineno})
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            defs_list.append({"kind": "function", "name": node.name, "lineno": node.lineno})
+    defs_list.sort(key=lambda x: (x["lineno"], x["kind"], x["name"]))
+    return defs_list
+
+def analyze_file(path: str) -> List[Dict]:
     try:
         content = open(path, "r", encoding="utf-8", errors="replace").read()
     except Exception as e:
         fail(f"Failed to read {path}: {e}")
+
+    if path.endswith(".py"):
+        return analyze_python_top_level(path, content)
+
+    try:
+        import lizard
+    except Exception as e:
+        fail(f"lizard is required for generate.py: {e}")
 
     info = lizard.analyze_file.analyze_source_code(path, content)
     defs_list = []

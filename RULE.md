@@ -23,7 +23,7 @@ python .cursor/rules/UNO/scripts/validate.py defs.json
 python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
-The generator uses `lizard`:
+The generator uses Python ASTs for `.py` files. For other languages it uses `lizard`:
 
 ```sh
 pipx install lizard

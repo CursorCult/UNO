@@ -95,7 +95,8 @@ python .cursor/rules/UNO/scripts/validate.py defs.json
 python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
-The generate script uses `lizard`. Install it with:
+The generate script uses Python ASTs for `.py` files. For other languages it uses `lizard`.
+Install `lizard` with:
 
 ```sh
 pipx install lizard
