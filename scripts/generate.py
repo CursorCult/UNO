@@ -46,7 +46,7 @@ def analyze_file(path: str) -> List[Dict]:
     try:
         import lizard
     except Exception as e:
-        fail(f"lizard is required for generator.py: {e}")
+        fail(f"lizard is required for generate.py: {e}")
 
     try:
         content = open(path, "r", encoding="utf-8", errors="replace").read()

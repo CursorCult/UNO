@@ -54,18 +54,20 @@ def main() -> int:
             defs_count = len(defs_list)
             if defs_count == 1:
                 single += 1
+                violations.append((path, defs_count, domain_name, True))
             elif defs_count > 1:
                 multi += 1
-                violations.append((path, defs_count, domain_name))
+                violations.append((path, defs_count, domain_name, False))
 
     if violations:
-        print(f"UNO summary: single={single} multi={multi}")
-        print("UNO violations:")
-        for path, defs_count, domain_name in violations:
-            print(f"- {path} (defs={defs_count}, domain={domain_name})")
+        print(f"UNO summary: 🏝️={single} 📚={multi}")
+        print("UNO details:")
+        for path, defs_count, domain_name, ok in violations:
+            marker = "🏝️" if ok else "📚"
+            print(f"- {marker} {path} (defs={defs_count}, domain={domain_name})")
         return 1
 
-    print(f"PASS: UNO check succeeded. single={single} multi={multi}")
+    print(f"PASS: UNO check succeeded. 🏝️={single} 📚={multi}")
     return 0
 
 

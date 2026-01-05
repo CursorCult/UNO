@@ -3,48 +3,30 @@ description: "Enforce one definition per file in source code"
 alwaysApply: true
 ---
 
-# UNO Pattern (One File, One Definition)
+# UNO (One File, One Definition)
 
-The UNO Pattern is language agnostic and applies to non-test source code. It enforces a strict rule: one file, one definitional unit. A module may contain one class or one function, but never more. No helpers, no side-utilities, no mixed responsibilities.
-
-This isolates behavior, reduces cognitive load, and keeps dependency boundaries explicit. It also makes Git diffs unambiguous: when a file changes, you know exactly which unit changed, with no risk of collateral edits hiding in the same module.
-
-The only exception is test files, which may group multiple tests as needed for clarity and coverage.
-
-UNO also requires naming consistency between a file and the definition it contains. The file name (without extension) must match the definition name using your project’s naming convention (e.g., `UserProfile` in `user_profile.py`).
+Each non-test source file should define exactly one class or one function. Keep files focused and avoid bundled helpers.
 
 ## Signals
 
-- 🏝️ in any chat or attached to a comment or code snippet indicates UNO is satisfied.
-- 📚 in any chat or attached to a comment or code snippet indicates UNO is not satisfied.
+- 🏝️ indicates UNO is satisfied.
+- 📚 indicates UNO is not satisfied.
 
-## Evidence format (cursorcult.defs.v1)
+## Use and test it
 
-Programmatic evaluation uses a shared `defs.json` (name configurable) with domain grouping:
+You can run the reference scripts directly:
 
-```json
-{
-  "schema": "cursorcult.defs.v1",
-  "domains": {
-    "core": {
-      "files": {
-        "src/a.py": {
-          "defs": [{"kind": "function", "name": "f", "lineno": 10}]
-        }
-      },
-      "single": 1,
-      "multi": 0
-    }
-  },
-  "single": 1,
-  "multi": 0
-}
+```sh
+python .cursor/rules/UNO/scripts/generate.py --glob "src/**/*.py" --domain core --output defs.json
+python .cursor/rules/UNO/scripts/generate.py --glob "tests/**/*.py" --domain tests --output defs.json
+python .cursor/rules/UNO/scripts/validate.py defs.json
+python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
-Default generator (`--glob` is repeatable):
+The generator uses `lizard`:
 
-```text
-python .cursor/rules/UNO/scripts/generator.py --glob "src/**/*.py" --domain core --output defs.json
+```sh
+pipx install lizard
 ```
 
 ## Examples (Python)

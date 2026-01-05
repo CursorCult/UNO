@@ -13,19 +13,20 @@ Rule file format reference: https://cursor.com/docs/context/rules#rulemd-file-fo
 
 **Programmatic evaluation (.CCUNO)**
 
-Create a `.CCUNO` at repo root with eval args on line 1 and generator commands on
-lines 2..N. Generators must include `--domain` and `--output`, and all generators
-must share the same output file (typically `defs.json`). `--glob` is repeatable.
+Create a `.CCUNO` at repo root with full command lines. Generators must include
+`--domain` and `--output`, and the evaluator must include `--input`. All
+generators must write to the same output file (typically `defs.json`).
+`--glob` is repeatable.
 
 Example:
 
 ```text
---
-python .cursor/rules/UNO/scripts/generator.py --glob "src/**/*.py" --domain core --output defs.json
-python .cursor/rules/UNO/scripts/generator.py --glob "tests/**/*.py" --domain tests --output defs.json
+python .cursor/rules/UNO/scripts/generate.py --glob "src/**/*.py" --domain core --output defs.json
+python .cursor/rules/UNO/scripts/generate.py --glob "tests/**/*.py" --domain tests --output defs.json
+python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
-The output schema is `cursorcult.defs.v1` and must include required aggregates:
+The output schema is `cursorcult.defs.v1`:
 
 ```json
 {
@@ -62,6 +63,10 @@ chmod +x .git/hooks/pre-commit
 - You’re trying to keep dependency boundaries explicit and avoid hidden helpers.
 - You’re working in a codebase where “utility creep” is a recurring problem.
 
+**Guidelines**
+
+- Common use-case: keep production files to one definition each while letting test files group multiple tests in a file.
+
 **Signals**
 
 - 🏝️ means the code or note is satisfying UNO.
@@ -78,6 +83,23 @@ chmod +x .git/hooks/pre-commit
 
 - `UNO/scripts/check_python.py` supports `--loose` to allow case-insensitive name matching and ignore underscores.
 - Progress output is on by default; use `--no-progress` to disable.
+
+**Reference scripts**
+
+UNO includes reference implementations you can run directly:
+
+```sh
+python .cursor/rules/UNO/scripts/generate.py --glob "src/**/*.py" --domain core --output defs.json
+python .cursor/rules/UNO/scripts/generate.py --glob "tests/**/*.py" --domain tests --output defs.json
+python .cursor/rules/UNO/scripts/validate.py defs.json
+python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
+```
+
+The generate script uses `lizard`. Install it with:
+
+```sh
+pipx install lizard
+```
 
 **Credits**
 
