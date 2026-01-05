@@ -15,16 +15,6 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
-def is_test_path(path: str) -> bool:
-    normalized = path.replace("\\", "/").lower()
-    parts = normalized.split("/")
-    if any(part in ("test", "tests") for part in parts[:-1]):
-        return True
-    filename = parts[-1]
-    stem = filename.rsplit(".", 1)[0]
-    return stem.startswith("test_") or stem.endswith("_test")
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate UNO rule using defs evidence.")
     parser.add_argument("--domain", help="Evaluate only a single domain.")
@@ -53,26 +43,29 @@ def main() -> int:
         selected = {args.domain: domains[args.domain]}
 
     violations = []
+    single = 0
+    multi = 0
     for domain_name, domain in selected.items():
         files = domain.get("files", {})
         for path, record in files.items():
-            defs_count = record.get("defs")
-            if not isinstance(defs_count, int):
+            defs_list = record.get("defs")
+            if not isinstance(defs_list, list):
                 continue
-            if defs_count == 0:
-                continue
-            if is_test_path(path):
-                continue
-            if defs_count != 1:
+            defs_count = len(defs_list)
+            if defs_count == 1:
+                single += 1
+            elif defs_count > 1:
+                multi += 1
                 violations.append((path, defs_count, domain_name))
 
     if violations:
+        print(f"UNO summary: single={single} multi={multi}")
         print("UNO violations:")
         for path, defs_count, domain_name in violations:
             print(f"- {path} (defs={defs_count}, domain={domain_name})")
         return 1
 
-    print("PASS: UNO check succeeded.")
+    print(f"PASS: UNO check succeeded. single={single} multi={multi}")
     return 0
 
 

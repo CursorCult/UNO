@@ -19,7 +19,7 @@ def fail(message: str) -> None:
 
 def load_existing(path: str) -> Dict:
     if not os.path.isfile(path):
-        return {"schema": SCHEMA, "domains": {}, "files": 0, "defs": 0}
+        return {"schema": SCHEMA, "domains": {}, "single": 0, "multi": 0}
     try:
         data = json.loads(open(path, "r", encoding="utf-8").read())
     except Exception as e:
@@ -54,28 +54,39 @@ def analyze_file(path: str) -> List[Dict]:
         fail(f"Failed to read {path}: {e}")
 
     info = lizard.analyze_file.analyze_source_code(path, content)
-    locs = []
+    defs_list = []
     for func in info.function_list:
-        locs.append(
+        defs_list.append(
             {
                 "kind": "function",
                 "name": func.name,
                 "lineno": func.start_line,
             }
         )
-    locs.sort(key=lambda x: (x["lineno"], x["kind"], x["name"]))
-    return locs
+    defs_list.sort(key=lambda x: (x["lineno"], x["kind"], x["name"]))
+    return defs_list
 
 
 def recompute_aggregates(domains: Dict) -> Dict:
-    total_files = 0
-    total_defs = 0
+    total_single = 0
+    total_multi = 0
     for domain in domains.values():
         files = domain.get("files", {})
-        total_files += len(files)
+        domain_single = 0
+        domain_multi = 0
         for record in files.values():
-            total_defs += int(record.get("defs", 0))
-    return {"files": total_files, "defs": total_defs}
+            defs_list = record.get("defs", [])
+            if isinstance(defs_list, list):
+                count = len(defs_list)
+                if count == 1:
+                    domain_single += 1
+                elif count > 1:
+                    domain_multi += 1
+        domain["single"] = domain_single
+        domain["multi"] = domain_multi
+        total_single += domain_single
+        total_multi += domain_multi
+    return {"single": total_single, "multi": total_multi}
 
 
 def main() -> int:
@@ -94,14 +105,14 @@ def main() -> int:
 
     files_map: Dict[str, Dict] = {}
     for path in collect_paths(args.glob):
-        locs = analyze_file(path)
-        files_map[path] = {"defs": len(locs), "locs": locs}
+        defs_list = analyze_file(path)
+        files_map[path] = {"defs": defs_list}
 
     domains[args.domain] = {"files": files_map}
 
     aggregates = recompute_aggregates(domains)
-    data["files"] = aggregates["files"]
-    data["defs"] = aggregates["defs"]
+    data["single"] = aggregates["single"]
+    data["multi"] = aggregates["multi"]
 
     os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
     with open(output, "w", encoding="utf-8") as f:

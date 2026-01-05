@@ -8,10 +8,10 @@ import sys
 
 
 SCHEMA = "cursorcult.defs.v1"
-ALLOWED_TOP_KEYS = {"schema", "domains", "files", "defs"}
-ALLOWED_DOMAIN_KEYS = {"files"}
-ALLOWED_FILE_KEYS = {"defs", "locs"}
-ALLOWED_LOC_KEYS = {"kind", "name", "lineno"}
+ALLOWED_TOP_KEYS = {"schema", "domains", "single", "multi"}
+ALLOWED_DOMAIN_KEYS = {"files", "single", "multi"}
+ALLOWED_FILE_KEYS = {"defs"}
+ALLOWED_DEF_KEYS = {"kind", "name", "lineno"}
 ALLOWED_KINDS = {"function", "class"}
 
 
@@ -20,19 +20,19 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
-def validate_loc(loc: dict, path: str) -> None:
-    extra = set(loc.keys()) - ALLOWED_LOC_KEYS
+def validate_def(defn: dict, path: str) -> None:
+    extra = set(defn.keys()) - ALLOWED_DEF_KEYS
     if extra:
-        fail(f"{path}: unexpected loc keys: {sorted(extra)}")
-    kind = loc.get("kind")
-    name = loc.get("name")
-    lineno = loc.get("lineno")
+        fail(f"{path}: unexpected def keys: {sorted(extra)}")
+    kind = defn.get("kind")
+    name = defn.get("name")
+    lineno = defn.get("lineno")
     if kind not in ALLOWED_KINDS:
-        fail(f"{path}: loc.kind must be one of {sorted(ALLOWED_KINDS)}")
+        fail(f"{path}: def.kind must be one of {sorted(ALLOWED_KINDS)}")
     if not isinstance(name, str) or not name.strip():
-        fail(f"{path}: loc.name must be a non-empty string")
+        fail(f"{path}: def.name must be a non-empty string")
     if not isinstance(lineno, int) or lineno < 1:
-        fail(f"{path}: loc.lineno must be an integer >= 1")
+        fail(f"{path}: def.lineno must be an integer >= 1")
 
 
 def main() -> int:
@@ -62,12 +62,12 @@ def main() -> int:
     if not isinstance(domains, dict) or not domains:
         fail("domains must be a non-empty object.")
 
-    files_total = data.get("files")
-    defs_total = data.get("defs")
-    if not isinstance(files_total, int) or files_total < 0:
-        fail("files must be an integer >= 0.")
-    if not isinstance(defs_total, int) or defs_total < 0:
-        fail("defs must be an integer >= 0.")
+    single_total = data.get("single")
+    multi_total = data.get("multi")
+    if not isinstance(single_total, int) or single_total < 0:
+        fail("single must be an integer >= 0.")
+    if not isinstance(multi_total, int) or multi_total < 0:
+        fail("multi must be an integer >= 0.")
 
     expected_domains = os.environ.get("CC_DOMAINS")
     if expected_domains:
@@ -77,8 +77,8 @@ def main() -> int:
             fail(f"domains must match .CCUNO: {sorted(expected_set)}")
 
     seen_paths = set()
-    computed_files = 0
-    computed_defs = 0
+    computed_single = 0
+    computed_multi = 0
 
     for domain_name, domain in domains.items():
         if not isinstance(domain, dict):
@@ -89,6 +89,15 @@ def main() -> int:
         files = domain.get("files")
         if not isinstance(files, dict):
             fail(f"{domain_name}: files must be an object.")
+        domain_single = domain.get("single")
+        domain_multi = domain.get("multi")
+        if not isinstance(domain_single, int) or domain_single < 0:
+            fail(f"{domain_name}: single must be an integer >= 0.")
+        if not isinstance(domain_multi, int) or domain_multi < 0:
+            fail(f"{domain_name}: multi must be an integer >= 0.")
+
+        domain_single_calc = 0
+        domain_multi_calc = 0
 
         for path, record in files.items():
             if path in seen_paths:
@@ -99,25 +108,31 @@ def main() -> int:
             extra_file = set(record.keys()) - ALLOWED_FILE_KEYS
             if extra_file:
                 fail(f"{path}: unexpected file keys: {sorted(extra_file)}")
-            defs_count = record.get("defs")
-            locs = record.get("locs")
-            if not isinstance(defs_count, int) or defs_count < 0:
-                fail(f"{path}: defs must be an integer >= 0.")
-            if not isinstance(locs, list):
-                fail(f"{path}: locs must be a list.")
-            if defs_count != len(locs):
-                fail(f"{path}: defs must equal len(locs).")
-            for loc in locs:
-                if not isinstance(loc, dict):
-                    fail(f"{path}: each loc must be an object.")
-                validate_loc(loc, path)
-            computed_files += 1
-            computed_defs += defs_count
+            defs_list = record.get("defs")
+            if not isinstance(defs_list, list):
+                fail(f"{path}: defs must be a list.")
+            for defn in defs_list:
+                if not isinstance(defn, dict):
+                    fail(f"{path}: each def must be an object.")
+                validate_def(defn, path)
+            defs_count = len(defs_list)
+            if defs_count == 1:
+                domain_single_calc += 1
+            elif defs_count > 1:
+                domain_multi_calc += 1
 
-    if computed_files != files_total:
-        fail(f"files must equal computed total ({computed_files}).")
-    if computed_defs != defs_total:
-        fail(f"defs must equal computed total ({computed_defs}).")
+        if domain_single_calc != domain_single:
+            fail(f"{domain_name}: single must equal computed total ({domain_single_calc}).")
+        if domain_multi_calc != domain_multi:
+            fail(f"{domain_name}: multi must equal computed total ({domain_multi_calc}).")
+
+        computed_single += domain_single_calc
+        computed_multi += domain_multi_calc
+
+    if computed_single != single_total:
+        fail(f"single must equal computed total ({computed_single}).")
+    if computed_multi != multi_total:
+        fail(f"multi must equal computed total ({computed_multi}).")
 
     print("OK: defs evidence is valid.")
     return 0

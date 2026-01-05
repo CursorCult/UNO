@@ -34,14 +34,15 @@ The output schema is `cursorcult.defs.v1` and must include required aggregates:
     "core": {
       "files": {
         "src/a.py": {
-          "defs": 1,
-          "locs": [{"kind": "function", "name": "f", "lineno": 10}]
+          "defs": [{"kind": "function", "name": "f", "lineno": 10}]
         }
-      }
+      },
+      "single": 1,
+      "multi": 0
     }
   },
-  "files": 1,
-  "defs": 1
+  "single": 1,
+  "multi": 0
 }
 ```
 
@@ -60,6 +61,11 @@ chmod +x .git/hooks/pre-commit
 - You want diffs to map to a single behavioral change.
 - You’re trying to keep dependency boundaries explicit and avoid hidden helpers.
 - You’re working in a codebase where “utility creep” is a recurring problem.
+
+**Signals**
+
+- 🏝️ means the code or note is satisfying UNO.
+- 📚 means the code or note is not satisfying UNO.
 
 **What it enforces**
 
