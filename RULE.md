@@ -13,6 +13,34 @@ The only exception is test files, which may group multiple tests as needed for c
 
 UNO also requires naming consistency between a file and the definition it contains. The file name (without extension) must match the definition name using your project’s naming convention (e.g., `UserProfile` in `user_profile.py`).
 
+## Evidence format (cursorcult.defs.v1)
+
+Programmatic evaluation uses a shared `defs.json` (name configurable) with domain grouping:
+
+```json
+{
+  "schema": "cursorcult.defs.v1",
+  "domains": {
+    "core": {
+      "files": {
+        "src/a.py": {
+          "defs": 1,
+          "locs": [{"kind": "function", "name": "f", "lineno": 10}]
+        }
+      }
+    }
+  },
+  "files": 1,
+  "defs": 1
+}
+```
+
+Default generator (`--glob` is repeatable):
+
+```text
+python .cursor/rules/UNO/scripts/generator.py --glob "src/**/*.py" --domain core --output defs.json
+```
+
 ## Examples (Python)
 
 Allowed: one definitional unit per file.

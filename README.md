@@ -11,6 +11,40 @@ cursorcult link UNO
 
 Rule file format reference: https://cursor.com/docs/context/rules#rulemd-file-format
 
+**Programmatic evaluation (.CCUNO)**
+
+Create a `.CCUNO` at repo root with eval args on line 1 and generator commands on
+lines 2..N. Generators must include `--domain` and `--output`, and all generators
+must share the same output file (typically `defs.json`). `--glob` is repeatable.
+
+Example:
+
+```text
+--
+python .cursor/rules/UNO/scripts/generator.py --glob "src/**/*.py" --domain core --output defs.json
+python .cursor/rules/UNO/scripts/generator.py --glob "tests/**/*.py" --domain tests --output defs.json
+```
+
+The output schema is `cursorcult.defs.v1` and must include required aggregates:
+
+```json
+{
+  "schema": "cursorcult.defs.v1",
+  "domains": {
+    "core": {
+      "files": {
+        "src/a.py": {
+          "defs": 1,
+          "locs": [{"kind": "function", "name": "f", "lineno": 10}]
+        }
+      }
+    }
+  },
+  "files": 1,
+  "defs": 1
+}
+```
+
 **When to use**
 
 - You want modules to be maximally focused and easy to reason about.
