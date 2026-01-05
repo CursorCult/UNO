@@ -1,5 +1,3 @@
-# Part of the [CursorCult](https://github.com/CursorCult)
-
 # UNO
 
 The UNO Pattern: one file == one definitional unit.
