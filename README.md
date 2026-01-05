@@ -95,11 +95,11 @@ python .cursor/rules/UNO/scripts/validate.py defs.json
 python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
-The generate script uses Python ASTs for `.py` files. For other languages it uses `lizard`.
-Install `lizard` with:
+The generate script uses tree-sitter for all supported languages.
+Install dependencies with:
 
 ```sh
-pipx install lizard
+pipx install tree_sitter tree_sitter_languages
 ```
 
 **Credits**

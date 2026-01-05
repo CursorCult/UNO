@@ -2,7 +2,6 @@
 """Generate UNO defs evidence using lizard."""
 
 import argparse
-import ast
 import json
 import os
 import sys
@@ -43,49 +42,137 @@ def collect_paths(patterns: List[str]) -> List[str]:
     return sorted(results)
 
 
-def analyze_python_top_level(path: str, content: str) -> List[Dict]:
+def get_parser(language: str):
     try:
-        tree = ast.parse(content, filename=path)
-    except SyntaxError as e:
-        fail(f"Syntax error in {path}: {e}")
+        from tree_sitter_languages import get_parser as ts_get_parser
     except Exception as e:
-        fail(f"Failed to parse {path}: {e}")
+        fail(f"tree_sitter_languages is required: {e}")
+    try:
+        return ts_get_parser(language)
+    except Exception as e:
+        fail(f"Unsupported language '{language}': {e}")
 
-    defs_list = []
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef):
-            defs_list.append({"kind": "class", "name": node.name, "lineno": node.lineno})
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            defs_list.append({"kind": "function", "name": node.name, "lineno": node.lineno})
+def language_for_path(path: str) -> str | None:
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".py":
+        return "python"
+    if ext in (".js", ".mjs", ".cjs", ".jsx"):
+        return "javascript"
+    if ext in (".ts", ".tsx"):
+        return "typescript"
+    if ext == ".go":
+        return "go"
+    if ext == ".java":
+        return "java"
+    if ext == ".rs":
+        return "rust"
+    if ext in (".c", ".h"):
+        return "c"
+    if ext in (".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx"):
+        return "cpp"
+    return None
+
+def node_text(content_bytes: bytes, node) -> str:
+    return content_bytes[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+
+def find_named_child(node, types: List[str]):
+    for child in node.named_children:
+        if child.type in types:
+            return child
+    return None
+
+def extract_name(node, content_bytes: bytes) -> str:
+    name_node = node.child_by_field_name("name")
+    if name_node is None:
+        name_node = find_named_child(node, ["identifier", "type_identifier"])
+    if name_node is None:
+        return ""
+    return node_text(content_bytes, name_node).strip()
+
+def add_def(defs_list: List[Dict], kind: str, node, content_bytes: bytes) -> None:
+    name = extract_name(node, content_bytes)
+    if not name:
+        return
+    lineno = node.start_point[0] + 1
+    defs_list.append({"kind": kind, "name": name, "lineno": lineno})
+
+def extract_top_level_defs(language: str, root, content_bytes: bytes) -> List[Dict]:
+    defs_list: List[Dict] = []
+
+    def handle_node(node):
+        ntype = node.type
+        if language == "python":
+            if ntype == "function_definition":
+                add_def(defs_list, "function", node, content_bytes)
+                return
+            if ntype == "class_definition":
+                add_def(defs_list, "class", node, content_bytes)
+                return
+        if language in ("javascript", "typescript"):
+            if ntype == "function_declaration":
+                add_def(defs_list, "function", node, content_bytes)
+                return
+            if ntype == "class_declaration":
+                add_def(defs_list, "class", node, content_bytes)
+                return
+        if language == "go":
+            if ntype in ("function_declaration", "method_declaration"):
+                add_def(defs_list, "function", node, content_bytes)
+                return
+            if ntype == "type_declaration":
+                for child in node.named_children:
+                    if child.type == "type_spec":
+                        add_def(defs_list, "class", child, content_bytes)
+                return
+        if language == "java":
+            if ntype == "method_declaration":
+                add_def(defs_list, "function", node, content_bytes)
+                return
+            if ntype in ("class_declaration", "interface_declaration", "record_declaration", "enum_declaration"):
+                add_def(defs_list, "class", node, content_bytes)
+                return
+        if language == "rust":
+            if ntype == "function_item":
+                add_def(defs_list, "function", node, content_bytes)
+                return
+            if ntype in ("struct_item", "enum_item", "trait_item", "impl_item"):
+                add_def(defs_list, "class", node, content_bytes)
+                return
+        if language in ("c", "cpp"):
+            if ntype == "function_definition":
+                add_def(defs_list, "function", node, content_bytes)
+                return
+            if ntype in ("struct_specifier", "class_specifier", "enum_specifier"):
+                add_def(defs_list, "class", node, content_bytes)
+                return
+
+    for child in root.named_children:
+        if child.type == "export_statement":
+            exported = find_named_child(child, ["function_declaration", "class_declaration"])
+            if exported is not None:
+                handle_node(exported)
+                continue
+        handle_node(child)
+        if language in ("c", "cpp") and child.type == "declaration":
+            for sub in child.named_children:
+                handle_node(sub)
+
     defs_list.sort(key=lambda x: (x["lineno"], x["kind"], x["name"]))
     return defs_list
 
 def analyze_file(path: str) -> List[Dict]:
     try:
-        content = open(path, "r", encoding="utf-8", errors="replace").read()
+        content_bytes = open(path, "rb").read()
     except Exception as e:
         fail(f"Failed to read {path}: {e}")
 
-    if path.endswith(".py"):
-        return analyze_python_top_level(path, content)
+    language = language_for_path(path)
+    if not language:
+        return []
 
-    try:
-        import lizard
-    except Exception as e:
-        fail(f"lizard is required for generate.py: {e}")
-
-    info = lizard.analyze_file.analyze_source_code(path, content)
-    defs_list = []
-    for func in info.function_list:
-        defs_list.append(
-            {
-                "kind": "function",
-                "name": func.name,
-                "lineno": func.start_line,
-            }
-        )
-    defs_list.sort(key=lambda x: (x["lineno"], x["kind"], x["name"]))
-    return defs_list
+    parser = get_parser(language)
+    tree = parser.parse(content_bytes)
+    return extract_top_level_defs(language, tree.root_node, content_bytes)
 
 
 def recompute_aggregates(domains: Dict) -> Dict:

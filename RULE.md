@@ -23,10 +23,10 @@ python .cursor/rules/UNO/scripts/validate.py defs.json
 python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
-The generator uses Python ASTs for `.py` files. For other languages it uses `lizard`:
+The generator uses tree-sitter for all supported languages:
 
 ```sh
-pipx install lizard
+pipx install tree_sitter tree_sitter_languages
 ```
 
 ## Examples (Python)
