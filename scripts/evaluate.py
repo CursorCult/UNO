@@ -18,14 +18,18 @@ def fail(message: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate UNO rule using defs evidence.")
     parser.add_argument("--domain", help="Evaluate only a single domain.")
-    parser.add_argument("path", help="Path to defs.json (or configured output file).")
+    parser.add_argument("--input", help="Path to defs.json (or configured output file).")
+    parser.add_argument("path", nargs="?", help="Path to defs.json (or configured output file).")
     args = parser.parse_args()
 
-    if not os.path.isfile(args.path):
-        fail(f"File not found: {args.path}")
+    input_path = args.input or args.path
+    if not input_path:
+        fail("Missing --input.")
+    if not os.path.isfile(input_path):
+        fail(f"File not found: {input_path}")
 
     try:
-        data = json.loads(open(args.path, "r", encoding="utf-8").read())
+        data = json.loads(open(input_path, "r", encoding="utf-8").read())
     except Exception as e:
         fail(f"Failed to parse JSON: {e}")
 
