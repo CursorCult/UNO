@@ -63,10 +63,12 @@ def main() -> int:
             else:
                 bad += 1
                 violators.append((path, defs_list))
-        marker = "check" if bad == 0 else "x"
-        print(f"{marker} : {domain_name} : 🏝️ {good} 📚 {bad}")
+        marker = "✅" if bad == 0 else "❌"
+        print(f"{marker} {domain_name} 🏝️ {good} 📚 {bad}")
         for path, defs_list in sorted(violators, key=lambda item: item[0]):
-            print(f"  {path} : {json.dumps(defs_list, ensure_ascii=True)}")
+            names = [item.get("name", "") for item in defs_list if isinstance(item, dict)]
+            names = [name for name in names if name]
+            print(f"  {path} : {', '.join(names)}")
         if bad:
             any_bad = True
 
