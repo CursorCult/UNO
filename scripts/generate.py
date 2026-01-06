@@ -130,10 +130,25 @@ def find_named_child(node, types: List[str]):
             return child
     return None
 
+def find_named_descendant(node, types: List[str]):
+    for child in node.named_children:
+        if child.type in types:
+            return child
+        descendant = find_named_descendant(child, types)
+        if descendant is not None:
+            return descendant
+    return None
+
 def extract_name(node, content_bytes: bytes) -> str:
     name_node = node.child_by_field_name("name")
     if name_node is None:
         name_node = find_named_child(node, ["identifier", "type_identifier"])
+    if name_node is None and node.type == "function_definition":
+        declarator = node.child_by_field_name("declarator")
+        if declarator is None:
+            declarator = find_named_child(node, ["declarator", "function_declarator"])
+        if declarator is not None:
+            name_node = find_named_descendant(declarator, ["identifier"])
     if name_node is None:
         return ""
     return node_text(content_bytes, name_node).strip()
