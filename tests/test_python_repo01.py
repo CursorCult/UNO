@@ -35,16 +35,20 @@ def run_generate(tmpdir: str) -> dict:
 
 def test_top_level_defs_only(repo_fixture) -> None:
     tmpdir = repo_fixture("python", "repo01")
-    path = os.path.join("src", "sample.py")
+    sample_path = os.path.join("src", "sample.py")
+    init_path = os.path.join("src", "__init__.py")
 
     data = run_generate(str(tmpdir))
     domains = data.get("domains", {})
     files = domains.get("core", {}).get("files", {})
-    record = files.get(path, {})
-    defs_list = record.get("defs", [])
+    sample_record = files.get(sample_path, {})
+    init_record = files.get(init_path, {})
+    sample_defs = sample_record.get("defs", [])
+    init_defs = init_record.get("defs", [])
 
-    assert set(files.keys()) == {path}
-    names = {item.get("name") for item in defs_list}
-    kinds = {item.get("kind") for item in defs_list}
+    assert set(files.keys()) == {sample_path, init_path}
+    names = {item.get("name") for item in sample_defs}
+    kinds = {item.get("kind") for item in sample_defs}
     assert names == {"C", "f"}
     assert kinds == {"class", "function"}
+    assert init_defs == []

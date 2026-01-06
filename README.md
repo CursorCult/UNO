@@ -86,11 +86,6 @@ pipx inject cursorcult pytest
 - The file name matches the definition name (following your project’s naming convention).
 - Test files are the only allowed exception for grouping.
 
-**Checker options**
-
-- `UNO/scripts/check_python.py` supports `--loose` to allow case-insensitive name matching and ignore underscores.
-- Progress output is on by default; use `--no-progress` to disable.
-
 **Reference scripts**
 
 UNO includes reference implementations you can run directly:
@@ -103,7 +98,7 @@ python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
 The generate script uses tree-sitter for all supported languages.
-Install dependencies with:
+`cursorcult` installs tree-sitter dependencies automatically.
 
 ```sh
 pipx install tree_sitter tree-sitter-languages
