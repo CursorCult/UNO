@@ -16,7 +16,6 @@ Rule file format reference: https://cursor.com/docs/context/rules#rulemd-file-fo
 Create a `.CCUNO` at repo root with full command lines. Generators must include
 `--domain` and `--output`, and the evaluator must include `--input`. All
 generators must write to the same output file (typically `defs.json`).
-`--glob` is repeatable.
 
 Example:
 

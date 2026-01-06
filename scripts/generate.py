@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Generate UNO defs evidence using lizard."""
+"""Generate UNO defs evidence using tree-sitter."""
 
 import argparse
 import json
 import os
 import sys
 from glob import glob
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 SCHEMA = "cursorcult.defs.v1"
@@ -42,6 +42,50 @@ def collect_paths(patterns: List[str]) -> List[str]:
     return sorted(results)
 
 
+EXT_TO_LANG = {
+    ".py": "python",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".jsx": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".go": "go",
+    ".java": "java",
+    ".rs": "rust",
+    ".c": "c",
+    ".h": "c",
+    ".cc": "cpp",
+    ".cpp": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
+    ".hh": "cpp",
+    ".hxx": "cpp",
+}
+
+FUNC_NODES = {
+    "python": {"function_definition"},
+    "javascript": {"function_declaration"},
+    "typescript": {"function_declaration"},
+    "go": {"function_declaration", "method_declaration"},
+    "java": set(),
+    "rust": {"function_item"},
+    "c": {"function_definition"},
+    "cpp": {"function_definition"},
+}
+
+CLASS_NODES = {
+    "python": {"class_definition"},
+    "javascript": {"class_declaration"},
+    "typescript": {"class_declaration"},
+    "go": set(),
+    "java": {"class_declaration", "interface_declaration", "record_declaration", "enum_declaration"},
+    "rust": {"struct_item", "enum_item", "trait_item"},
+    "c": {"struct_specifier", "enum_specifier"},
+    "cpp": {"struct_specifier", "class_specifier", "enum_specifier"},
+}
+
+
 def get_parser(language: str):
     try:
         from tree_sitter_languages import get_parser as ts_get_parser
@@ -52,25 +96,9 @@ def get_parser(language: str):
     except Exception as e:
         fail(f"Unsupported language '{language}': {e}")
 
-def language_for_path(path: str) -> str | None:
+def language_for_path(path: str) -> Optional[str]:
     ext = os.path.splitext(path)[1].lower()
-    if ext == ".py":
-        return "python"
-    if ext in (".js", ".mjs", ".cjs", ".jsx"):
-        return "javascript"
-    if ext in (".ts", ".tsx"):
-        return "typescript"
-    if ext == ".go":
-        return "go"
-    if ext == ".java":
-        return "java"
-    if ext == ".rs":
-        return "rust"
-    if ext in (".c", ".h"):
-        return "c"
-    if ext in (".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx"):
-        return "cpp"
-    return None
+    return EXT_TO_LANG.get(ext)
 
 def node_text(content_bytes: bytes, node) -> str:
     return content_bytes[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
@@ -98,53 +126,21 @@ def add_def(defs_list: List[Dict], kind: str, node, content_bytes: bytes) -> Non
 
 def extract_top_level_defs(language: str, root, content_bytes: bytes) -> List[Dict]:
     defs_list: List[Dict] = []
+    func_nodes = FUNC_NODES.get(language, set())
+    class_nodes = CLASS_NODES.get(language, set())
 
     def handle_node(node):
         ntype = node.type
-        if language == "python":
-            if ntype == "function_definition":
-                add_def(defs_list, "function", node, content_bytes)
-                return
-            if ntype == "class_definition":
-                add_def(defs_list, "class", node, content_bytes)
-                return
-        if language in ("javascript", "typescript"):
-            if ntype == "function_declaration":
-                add_def(defs_list, "function", node, content_bytes)
-                return
-            if ntype == "class_declaration":
-                add_def(defs_list, "class", node, content_bytes)
-                return
-        if language == "go":
-            if ntype in ("function_declaration", "method_declaration"):
-                add_def(defs_list, "function", node, content_bytes)
-                return
-            if ntype == "type_declaration":
-                for child in node.named_children:
-                    if child.type == "type_spec":
-                        add_def(defs_list, "class", child, content_bytes)
-                return
-        if language == "java":
-            if ntype == "method_declaration":
-                add_def(defs_list, "function", node, content_bytes)
-                return
-            if ntype in ("class_declaration", "interface_declaration", "record_declaration", "enum_declaration"):
-                add_def(defs_list, "class", node, content_bytes)
-                return
-        if language == "rust":
-            if ntype == "function_item":
-                add_def(defs_list, "function", node, content_bytes)
-                return
-            if ntype in ("struct_item", "enum_item", "trait_item", "impl_item"):
-                add_def(defs_list, "class", node, content_bytes)
-                return
-        if language in ("c", "cpp"):
-            if ntype == "function_definition":
-                add_def(defs_list, "function", node, content_bytes)
-                return
-            if ntype in ("struct_specifier", "class_specifier", "enum_specifier"):
-                add_def(defs_list, "class", node, content_bytes)
-                return
+        if ntype in func_nodes:
+            add_def(defs_list, "function", node, content_bytes)
+            return
+        if ntype in class_nodes:
+            add_def(defs_list, "class", node, content_bytes)
+            return
+        if language == "go" and ntype == "type_declaration":
+            for child in node.named_children:
+                if child.type == "type_spec":
+                    add_def(defs_list, "class", child, content_bytes)
 
     for child in root.named_children:
         if child.type == "export_statement":
@@ -198,7 +194,7 @@ def recompute_aggregates(domains: Dict) -> Dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate UNO defs evidence using lizard.")
+    parser = argparse.ArgumentParser(description="Generate UNO defs evidence using tree-sitter.")
     parser.add_argument("--glob", action="append", required=True, help="Glob pattern of files.")
     parser.add_argument("--domain", required=True, help="Domain name.")
     parser.add_argument("--output", required=True, help="Output JSON path (repo-relative).")
