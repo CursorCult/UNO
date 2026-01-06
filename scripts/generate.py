@@ -107,7 +107,11 @@ def get_parser(language: str):
         try:
             from tree_sitter import Parser
             parser = Parser()
-            parser.set_language(tsl.get_language(language))
+            lang = tsl.get_language(language)
+            if hasattr(parser, "set_language"):
+                parser.set_language(lang)
+            else:
+                parser.language = lang
             return parser
         except Exception as e:
             last_error = e
