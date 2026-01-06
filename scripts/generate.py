@@ -95,12 +95,19 @@ WRAPPER_NODES = {
 def get_parser(language: str):
     try:
         from tree_sitter_languages import get_parser as ts_get_parser
+        from tree_sitter_languages import get_language as ts_get_language
     except Exception as e:
         fail(f"tree-sitter-languages is required: {e}")
     try:
         return ts_get_parser(language)
     except Exception as e:
-        fail(f"Unsupported language '{language}': {e}")
+        try:
+            from tree_sitter import Parser
+            parser = Parser()
+            parser.set_language(ts_get_language(language))
+            return parser
+        except Exception:
+            fail(f"Unsupported language '{language}': {e}")
 
 def language_for_path(path: str) -> Optional[str]:
     ext = os.path.splitext(path)[1].lower()
