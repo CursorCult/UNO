@@ -1,9 +1,16 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
-import textwrap
+import pytest
+
+def require_tree_sitter() -> None:
+    try:
+        import tree_sitter_languages  # noqa: F401
+    except Exception:
+        pytest.skip("tree_sitter_languages is required for UNO tests.")
 
 
 def rule_dir() -> str:
@@ -14,8 +21,8 @@ def rule_dir() -> str:
 
 
 def run_generate(tmpdir: str) -> dict:
-    defs_path = os.path.join(tmpdir, "defs.json")
-    pattern = os.path.join(tmpdir, "**", "*.py")
+    defs_path = "defs.json"
+    pattern = os.path.join("src", "**", "*.cpp")
     script = os.path.join(rule_dir(), "scripts", "generate.py")
     subprocess.run(
         [
@@ -29,29 +36,20 @@ def run_generate(tmpdir: str) -> dict:
             defs_path,
         ],
         check=True,
+        cwd=tmpdir,
     )
-    with open(defs_path, "r", encoding="utf-8") as handle:
+    with open(os.path.join(tmpdir, defs_path), "r", encoding="utf-8") as handle:
         return json.load(handle)
 
 
-def test_top_level_defs_only() -> None:
-    sample = textwrap.dedent(
-        """
-        class C:
-            def method(self):
-                return 1
-
-        def f():
-            def inner():
-                return 2
-            return inner()
-        """
-    ).lstrip()
-
+def test_cpp_top_level_defs_only() -> None:
+    require_tree_sitter()
     with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "sample.py")
-        with open(path, "w", encoding="utf-8") as handle:
-            handle.write(sample)
+        fixture_dir = os.path.join(
+            os.path.dirname(__file__), "fixtures", "cpp", "repo01"
+        )
+        shutil.copytree(fixture_dir, tmpdir, dirs_exist_ok=True)
+        path = os.path.join("src", "sample.cpp")
 
         data = run_generate(tmpdir)
         domains = data.get("domains", {})
@@ -61,5 +59,5 @@ def test_top_level_defs_only() -> None:
 
         names = {item.get("name") for item in defs_list}
         kinds = {item.get("kind") for item in defs_list}
-        assert names == {"C", "f"}
+        assert names == {"Foo", "add"}
         assert kinds == {"class", "function"}
