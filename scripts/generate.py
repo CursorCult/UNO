@@ -96,7 +96,7 @@ def get_parser(language: str):
     try:
         from tree_sitter_languages import get_parser as ts_get_parser
     except Exception as e:
-        fail(f"tree_sitter_languages is required: {e}")
+        fail(f"tree-sitter-languages is required: {e}")
     try:
         return ts_get_parser(language)
     except Exception as e:

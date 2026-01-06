@@ -98,7 +98,7 @@ The generate script uses tree-sitter for all supported languages.
 Install dependencies with:
 
 ```sh
-pipx install tree_sitter tree_sitter_languages
+pipx install tree_sitter tree-sitter-languages
 ```
 
 **Credits**
