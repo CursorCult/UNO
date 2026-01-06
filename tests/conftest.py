@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+collect_ignore = ["fixtures"]
+
 
 @pytest.fixture
 def repo_fixture(tmp_path: Path):
