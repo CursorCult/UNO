@@ -1,0 +1,11 @@
+name: ccverify
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  verify:
+    uses: CursorCult/.github/.github/workflows/verify-rule.yml@main
