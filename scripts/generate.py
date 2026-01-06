@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import sys
+import ctypes
 from glob import glob
 from typing import Dict, List, Optional
 
@@ -92,29 +93,42 @@ WRAPPER_NODES = {
 }
 
 
+LANG_SYMBOLS = {
+    "python": "tree_sitter_python",
+    "javascript": "tree_sitter_javascript",
+    "typescript": "tree_sitter_typescript",
+    "go": "tree_sitter_go",
+    "java": "tree_sitter_java",
+    "rust": "tree_sitter_rust",
+    "c": "tree_sitter_c",
+    "cpp": "tree_sitter_cpp",
+}
+
 def get_parser(language: str):
     try:
         import tree_sitter_languages as tsl
     except Exception as e:
         fail(f"tree-sitter-languages is required: {e}")
     last_error = None
-    if hasattr(tsl, "get_parser"):
-        try:
-            return tsl.get_parser(language)
-        except Exception as e:
-            last_error = e
-    if hasattr(tsl, "get_language"):
-        try:
-            from tree_sitter import Parser
-            parser = Parser()
-            lang = tsl.get_language(language)
-            if hasattr(parser, "set_language"):
-                parser.set_language(lang)
-            else:
-                parser.language = lang
-            return parser
-        except Exception as e:
-            last_error = e
+    try:
+        lang_path = os.path.join(os.path.dirname(tsl.__file__), "languages.so")
+        lib = ctypes.CDLL(lang_path)
+        symbol = LANG_SYMBOLS.get(language, f"tree_sitter_{language}")
+        func = getattr(lib, symbol)
+        func.restype = ctypes.c_void_p
+        ptr = func()
+        if not ptr:
+            raise RuntimeError(f"Null language pointer for {language}")
+        from tree_sitter import Language, Parser
+        lang = Language(ptr, language)
+        parser = Parser()
+        if hasattr(parser, "set_language"):
+            parser.set_language(lang)
+        else:
+            parser.language = lang
+        return parser
+    except Exception as e:
+        last_error = e
     fail(f"Unsupported language '{language}': {last_error}")
 
 def language_for_path(path: str) -> Optional[str]:

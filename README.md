@@ -55,6 +55,14 @@ cp .cursor/rules/UNO/scripts/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
 
+**Testing UNO**
+
+If you installed `cursorcult` with `pipx`, add pytest once:
+
+```sh
+pipx inject cursorcult pytest
+```
+
 **When to use**
 
 - You want modules to be maximally focused and easy to reason about.
