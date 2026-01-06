@@ -3,10 +3,10 @@ name: tests
 on:
   push:
     branches:
-      - "v*"
+      - "t*"
   pull_request:
     branches:
-      - "v*"
+      - "t*"
 
 jobs:
   test:
