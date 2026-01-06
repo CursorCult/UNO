@@ -1,0 +1,22 @@
+name: mint
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g., 0 for v0)"
+        required: true
+        type: string
+      branch:
+        description: "Source branch (e.g., t0)"
+        required: true
+        type: string
+        default: "t0"
+
+jobs:
+  mint:
+    uses: CursorCult/.github/.github/workflows/mint-rule.yml@main
+    with:
+      version: ${{ inputs.version }}
+      branch: ${{ inputs.branch }}
+      python-version: "3.12"
