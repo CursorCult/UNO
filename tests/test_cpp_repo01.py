@@ -1,16 +1,7 @@
 import json
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
-import pytest
-
-def require_tree_sitter() -> None:
-    try:
-        import tree_sitter_languages  # noqa: F401
-    except Exception:
-        pytest.skip("tree_sitter_languages is required for UNO tests.")
 
 
 def rule_dir() -> str:
@@ -42,22 +33,17 @@ def run_generate(tmpdir: str) -> dict:
         return json.load(handle)
 
 
-def test_cpp_top_level_defs_only() -> None:
-    require_tree_sitter()
-    with tempfile.TemporaryDirectory() as tmpdir:
-        fixture_dir = os.path.join(
-            os.path.dirname(__file__), "fixtures", "cpp", "repo01"
-        )
-        shutil.copytree(fixture_dir, tmpdir, dirs_exist_ok=True)
-        path = os.path.join("src", "sample.cpp")
+def test_cpp_top_level_defs_only(repo_fixture) -> None:
+    tmpdir = repo_fixture("cpp", "repo01")
+    path = os.path.join("src", "sample.cpp")
 
-        data = run_generate(tmpdir)
-        domains = data.get("domains", {})
-        files = domains.get("core", {}).get("files", {})
-        record = files.get(path, {})
-        defs_list = record.get("defs", [])
+    data = run_generate(str(tmpdir))
+    domains = data.get("domains", {})
+    files = domains.get("core", {}).get("files", {})
+    record = files.get(path, {})
+    defs_list = record.get("defs", [])
 
-        names = {item.get("name") for item in defs_list}
-        kinds = {item.get("kind") for item in defs_list}
-        assert names == {"Foo", "add"}
-        assert kinds == {"class", "function"}
+    names = {item.get("name") for item in defs_list}
+    kinds = {item.get("kind") for item in defs_list}
+    assert names == {"Foo", "add"}
+    assert kinds == {"class", "function"}
