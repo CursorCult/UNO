@@ -85,6 +85,12 @@ CLASS_NODES = {
     "cpp": {"struct_specifier", "class_specifier", "enum_specifier"},
 }
 
+WRAPPER_NODES = {
+    "python": {"decorated_definition"},
+    "javascript": {"export_statement", "export_default_declaration"},
+    "typescript": {"export_statement", "export_default_declaration"},
+}
+
 
 def get_parser(language: str):
     try:
@@ -128,6 +134,7 @@ def extract_top_level_defs(language: str, root, content_bytes: bytes) -> List[Di
     defs_list: List[Dict] = []
     func_nodes = FUNC_NODES.get(language, set())
     class_nodes = CLASS_NODES.get(language, set())
+    wrapper_nodes = WRAPPER_NODES.get(language, set())
 
     def handle_node(node):
         ntype = node.type
@@ -137,19 +144,19 @@ def extract_top_level_defs(language: str, root, content_bytes: bytes) -> List[Di
         if ntype in class_nodes:
             add_def(defs_list, "class", node, content_bytes)
             return
+        if ntype in wrapper_nodes:
+            exported = find_named_child(node, list(func_nodes | class_nodes))
+            if exported is not None:
+                handle_node(exported)
+            return
         if language == "go" and ntype == "type_declaration":
             for child in node.named_children:
                 if child.type == "type_spec":
                     add_def(defs_list, "class", child, content_bytes)
 
     for child in root.named_children:
-        if child.type == "export_statement":
-            exported = find_named_child(child, ["function_declaration", "class_declaration"])
-            if exported is not None:
-                handle_node(exported)
-                continue
         handle_node(child)
-        if language in ("c", "cpp") and child.type == "declaration":
+        if language in ("c", "cpp") and child.type in ("declaration", "type_definition"):
             for sub in child.named_children:
                 handle_node(sub)
 
