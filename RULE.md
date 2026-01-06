@@ -5,7 +5,7 @@ alwaysApply: true
 
 # UNO (One File, One Definition)
 
-Each non-test source file should define exactly one class or one function.
+Each non-test source file should define at most one class or one function.
 
 Signals:
 - 🏝️ means UNO is satisfied.

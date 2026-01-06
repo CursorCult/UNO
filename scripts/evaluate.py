@@ -58,7 +58,7 @@ def main() -> int:
             if not isinstance(defs_list, list):
                 continue
             defs_count = len(defs_list)
-            if defs_count == 1:
+            if defs_count <= 1:
                 good += 1
             else:
                 bad += 1

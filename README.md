@@ -81,7 +81,7 @@ pipx inject cursorcult pytest
 
 **What it enforces**
 
-- Each non-test source file defines exactly one class *or* one function.
+- Each non-test source file defines at most one class *or* one function.
 - No extra helpers, side-utilities, or mixed responsibilities in the same module.
 - The file name matches the definition name (following your project’s naming convention).
 - Test files are the only allowed exception for grouping.
