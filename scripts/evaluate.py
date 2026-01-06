@@ -46,33 +46,31 @@ def main() -> int:
             fail(f"domain not found: {args.domain}")
         selected = {args.domain: domains[args.domain]}
 
-    violations = []
-    single = 0
-    multi = 0
-    for domain_name, domain in selected.items():
+    any_bad = False
+    for domain_name in sorted(selected.keys()):
+        domain = selected[domain_name]
         files = domain.get("files", {})
+        good = 0
+        bad = 0
+        violators = []
         for path, record in files.items():
             defs_list = record.get("defs")
             if not isinstance(defs_list, list):
                 continue
             defs_count = len(defs_list)
             if defs_count == 1:
-                single += 1
-                violations.append((path, defs_count, domain_name, True))
-            elif defs_count > 1:
-                multi += 1
-                violations.append((path, defs_count, domain_name, False))
+                good += 1
+            else:
+                bad += 1
+                violators.append((path, defs_list))
+        marker = "check" if bad == 0 else "x"
+        print(f"{marker} : {domain_name} : 🏝️ {good} 📚 {bad}")
+        for path, defs_list in sorted(violators, key=lambda item: item[0]):
+            print(f"  {path} : {json.dumps(defs_list, ensure_ascii=True)}")
+        if bad:
+            any_bad = True
 
-    if violations:
-        print(f"UNO summary: 🏝️={single} 📚={multi}")
-        print("UNO details:")
-        for path, defs_count, domain_name, ok in violations:
-            marker = "🏝️" if ok else "📚"
-            print(f"- {marker} {path} (defs={defs_count}, domain={domain_name})")
-        return 1
-
-    print(f"PASS: UNO check succeeded. 🏝️={single} 📚={multi}")
-    return 0
+    return 1 if any_bad else 0
 
 
 if __name__ == "__main__":
